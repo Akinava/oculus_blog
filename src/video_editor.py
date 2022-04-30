@@ -1,5 +1,6 @@
 from os import walk, system, replace
 from os.path import join, isfile
+from datetime import datetime, timedelta
 from settings import (
     logger,
     DIR_VIDEO_INPUT,
@@ -7,10 +8,11 @@ from settings import (
     VIDEO_EXT,
     TIMING_EXT,
     DIR_VIDEO_OUTPUT,
-    FIRST_OUTPUT_FILE_INDEX,
-    FILE_NAME_INDENT,
     DIR_VIDEO_DONE,
     DIR_VIDEO_FAIL,
+    SCHEDULE,
+    LAST_VIDEO_FILE,
+    DATETIME_FORMAT,
 )
 
 
@@ -28,11 +30,14 @@ def cat_video(project_dir):
 
 
 def mv_result_files(result, project_dir, video_file_name):
+    if result == FAIL:
+        return
     input_video_file_path = get_video_file_path(project_dir, video_file_name)
     result_video_file_path = get_result_file_path(project_dir, result, video_file_name)
     timing_file_name = get_timing_file_name(video_file_name)
     input_timing_file_path = get_timing_file_path(project_dir, timing_file_name)
     result_timing_file_path = get_result_file_path(project_dir, result, timing_file_name)
+
     mv_file(input_video_file_path, result_video_file_path)
     mv_file(input_timing_file_path, result_timing_file_path)
 
@@ -97,36 +102,113 @@ def ffmpeg_cat(project_dir, input_video_file_path, start_time, finish_time):
 
 def make_ffmpeg_shell_command(project_dir, input_video_file_path, start_time, finish_time):
     output_file_path = get_output_file_path(project_dir)
-    return 'ffmpeg -ss {start_time} -to {finish_time} -i {input_video_file_path} -c copy {output_file_path}'.format(
+    return 'ffmpeg -ss {start_time} -to {finish_time} -i "{input_video_file_path}" -c copy "{output_file_path}"'.format(
         start_time=start_time,
         finish_time=finish_time,
         input_video_file_path=input_video_file_path,
         output_file_path=output_file_path
     )
+    # return 'echo "{input_video_file_path} {start_time} {finish_time}" > "{output_file_path}"'.format(
+    #     input_video_file_path=input_video_file_path,
+    #     start_time=start_time,
+    #     finish_time=finish_time,
+    #     output_file_path=output_file_path,
+    # )
+
+
+def get_last_video_file_data_path(project_dir):
+    return join(project_dir, LAST_VIDEO_FILE)
+
+
+def get_last_video_data_time(project_dir):
+    last_video_file_data_path = get_last_video_file_data_path(project_dir)
+    last_video_time = read_file(last_video_file_data_path)
+    if last_video_time is None:
+        raise Exception('required data about last video in file {}'.format(last_video_file_path))
+    return last_video_time
 
 
 def get_output_file_path(project_dir):
-    output_dir = join(project_dir, DIR_VIDEO_OUTPUT)
-    files_list = get_files_list(output_dir)
-    files_index_list = []
-    for fname in files_list:
-        basename, _ = fname.split('.')
-        if not basename.isdigit():
-            continue
-        files_index_list.append(int(basename))
+    last_video_data_time = get_last_video_data_time(project_dir)
+    next_video_data_time = get_next_video_data_time(last_video_data_time)
+    save_next_video_data_time(project_dir, next_video_data_time)
+    next_video_name = make_video_name(next_video_data_time)
+    return join(project_dir, DIR_VIDEO_OUTPUT, next_video_name)
 
-    if len(files_index_list) == 0:
-        last_file_index = FIRST_OUTPUT_FILE_INDEX
-    else:
-        files_index_list.sort()
-        last_file_index = files_index_list[-1] + 1
-    output_file_name = '{num:0{width}}.{ext}'.format(num=last_file_index, width=FILE_NAME_INDENT, ext=VIDEO_EXT)
-    return join(output_dir, output_file_name)
+
+def make_video_name(data_time):
+    return '{}.{}'.format(to_date_time_to_str(data_time), VIDEO_EXT)
+
+
+def save_next_video_data_time(project_dir, data_time):
+    str_date_time = to_date_time_to_str(data_time)
+    write_file(get_last_video_file_data_path(project_dir), str_date_time)
+
+
+def to_date_time_to_str(data_time):
+    return datetime.strftime(data_time, DATETIME_FORMAT)
+
+
+def str_to_date_time(str_date_time):
+    return datetime.strptime(str_date_time, DATETIME_FORMAT)
+
+
+def get_schedule():
+    SCHEDULE.sort()
+    schedule = []
+    for t in SCHEDULE:
+        schedule.append(datetime.strptime(t, '%H:%M').time())
+    return schedule
+
+
+def extract_current_date(date_time):
+    return date_time.date()
+
+
+def extract_next_date(date_time):
+    return (date_time + timedelta(days=1)).date()
+
+
+def get_last_schedule_time():
+    return get_schedule()[-1]
+
+
+def get_first_schedule_time():
+    return get_schedule()[0]
+
+
+def get_next_date(date_time):
+    if date_time.time() < get_last_schedule_time():
+        return extract_current_date(date_time)
+    return extract_next_date(date_time)
+
+
+def get_next_time(date_time):
+    schedule = get_schedule()
+    for t in schedule:
+        if date_time.time() < t:
+            return t
+    return get_first_schedule_time()
+
+
+def get_next_video_data_time(last_video_data_time_str):
+    last_video_date_time = str_to_date_time(last_video_data_time_str)
+    next_date = get_next_date(last_video_date_time)
+    next_time = get_next_time(last_video_date_time)
+    return datetime.combine(next_date, next_time)
 
 
 def get_files_list(dir):
     for _, _, files_list in walk(dir):
-        return files_list
+        return filter_file_by_ext(files_list, VIDEO_EXT)
+
+
+def filter_file_by_ext(files_list, filter_ext):
+    filtered_files = []
+    for f in files_list:
+        if filter_ext in f:
+            filtered_files.append(f)
+    return filtered_files
 
 
 def mv_file(file_path, dir):
@@ -138,6 +220,11 @@ def read_file(path):
         return None
     with open(path) as f:
         return f.read()
+
+
+def write_file(path, data):
+    with open(path, 'w') as f:
+        return f.write(data)
 
 
 def do_shell_command(ffmpeg_shell_command):
