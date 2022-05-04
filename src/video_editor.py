@@ -1,7 +1,14 @@
-from os import system, replace
-from os.path import join, isfile
+from os import system
+from os.path import join
 from datetime import datetime, timedelta
-from utility import get_files_list
+from utility import (
+    get_files_list,
+    read_file,
+    read_video_data,
+    write_video_data,
+    mv_file,
+)
+import settings
 from settings import (
     logger,
     DIR_VIDEO_INPUT,
@@ -12,7 +19,7 @@ from settings import (
     DIR_VIDEO_DONE,
     DIR_VIDEO_FAIL,
     SCHEDULE,
-    LAST_VIDEO_FILE,
+    LAST_VIDEO_DATA_KEY,
     DATETIME_FORMAT,
 )
 
@@ -21,48 +28,47 @@ DONE = 0
 FAIL = 1
 
 
-def cat_video(project_dir):
-    logger.info('project_dir: {}'.format(project_dir))
-    dir_input_video = get_dir_input_video(project_dir)
+def cat_video():
+    logger.info('project_dir: {}'.format(settings.project_dir))
+    dir_input_video = get_dir_input_video()
     video_files_list = filter_file_by_ext(get_files_list(dir_input_video), VIDEO_EXT)
     for video_file_name in video_files_list:
-        result = cat_video_by_timing(project_dir, video_file_name)
-        mv_result_files(result, project_dir, video_file_name)
+        result = cat_video_by_timing(video_file_name)
+        mv_result_files(result, video_file_name)
 
 
-def mv_result_files(result, project_dir, video_file_name):
+def mv_result_files(result, video_file_name):
     if result == FAIL:
         return
-    input_video_file_path = get_video_file_path(project_dir, video_file_name)
-    result_video_file_path = get_result_file_path(project_dir, result, video_file_name)
+    input_video_file_path = get_video_file_path(video_file_name)
+    result_video_file_path = get_result_file_path(result, video_file_name)
     timing_file_name = get_timing_file_name(video_file_name)
-    input_timing_file_path = get_timing_file_path(project_dir, timing_file_name)
-    result_timing_file_path = get_result_file_path(project_dir, result, timing_file_name)
-
+    input_timing_file_path = get_timing_file_path(timing_file_name)
+    result_timing_file_path = get_result_file_path(result, timing_file_name)
     mv_file(input_video_file_path, result_video_file_path)
     mv_file(input_timing_file_path, result_timing_file_path)
 
 
-def get_result_file_path(project_dir, result, video_file_name):
+def get_result_file_path(result, video_file_name):
     if result == DONE:
-        return join(project_dir, DIR_VIDEO_DONE, video_file_name)
-    return join(project_dir, DIR_VIDEO_FAIL, video_file_name)
+        return join(settings.project_dir, DIR_VIDEO_DONE, video_file_name)
+    return join(settings.project_dir, DIR_VIDEO_FAIL, video_file_name)
 
 
 def get_timing_file_name(video_file_name):
     return video_file_name.replace(VIDEO_EXT, TIMING_EXT)
 
 
-def get_dir_input_video(project_dir):
-    return join(project_dir, DIR_VIDEO_INPUT)
+def get_dir_input_video():
+    return join(settings.project_dir, DIR_VIDEO_INPUT)
 
 
-def get_video_file_path(project_dir, video_file_name):
-    return join(project_dir, DIR_VIDEO_INPUT, video_file_name)
+def get_video_file_path(video_file_name):
+    return join(settings.project_dir, DIR_VIDEO_INPUT, video_file_name)
 
 
-def get_timing_file_path(project_dir, timing_file_name):
-    return join(project_dir, DIR_TIMINGS, timing_file_name)
+def get_timing_file_path(timing_file_name):
+    return join(settings.project_dir, DIR_TIMINGS, timing_file_name)
 
 
 def get_timing_lines(timing_data):
@@ -77,9 +83,9 @@ def timing_lines_len(timing_lines):
     return len(timing_lines) - 1
 
 
-def cat_video_by_timing(project_dir, video_file_name):
-    input_video_file_path = get_video_file_path(project_dir, video_file_name)
-    timing_file_path = get_timing_file_path(project_dir, get_timing_file_name(video_file_name))
+def cat_video_by_timing(video_file_name):
+    input_video_file_path = get_video_file_path(video_file_name)
+    timing_file_path = get_timing_file_path(get_timing_file_name(video_file_name))
 
     timing_data = read_file(timing_file_path)
     if timing_data is None:
@@ -92,17 +98,17 @@ def cat_video_by_timing(project_dir, video_file_name):
         start_time, finish_time = get_start_and_finish_time(line_index, timing_lines)
         if '' in [start_time, finish_time]:
             continue
-        ffmpeg_cat(project_dir, input_video_file_path, start_time, finish_time)
+        ffmpeg_cat(input_video_file_path, start_time, finish_time)
     return DONE
 
 
-def ffmpeg_cat(project_dir, input_video_file_path, start_time, finish_time):
-    ffmpeg_shell_command = make_ffmpeg_shell_command(project_dir, input_video_file_path, start_time, finish_time)
+def ffmpeg_cat(input_video_file_path, start_time, finish_time):
+    ffmpeg_shell_command = make_ffmpeg_shell_command(input_video_file_path, start_time, finish_time)
     do_shell_command(ffmpeg_shell_command)
 
 
-def make_ffmpeg_shell_command(project_dir, input_video_file_path, start_time, finish_time):
-    output_file_path = get_output_file_path(project_dir)
+def make_ffmpeg_shell_command(input_video_file_path, start_time, finish_time):
+    output_file_path = get_output_file_path()
     return 'ffmpeg -ss {start_time} -to {finish_time} -i "{input_video_file_path}" -c copy "{output_file_path}"'.format(
         start_time=start_time,
         finish_time=finish_time,
@@ -111,37 +117,37 @@ def make_ffmpeg_shell_command(project_dir, input_video_file_path, start_time, fi
     )
 
 
-def get_last_video_file_data_path(project_dir):
-    return join(project_dir, LAST_VIDEO_FILE)
-
-
-def get_last_video_data_time(project_dir):
-    last_video_file_data_path = get_last_video_file_data_path(project_dir)
-    last_video_time = read_file(last_video_file_data_path)
+def get_last_video_date_time():
+    last_video_time = get_last_video_time()
     if last_video_time is None:
-        raise Exception('required data about last video in file {}'.format(last_video_file_path))
+        raise Exception('required data about last video')
     return last_video_time
 
 
-def get_output_file_path(project_dir):
-    last_video_data_time = get_last_video_data_time(project_dir)
-    next_video_data_time = get_next_video_data_time(last_video_data_time)
-    save_next_video_data_time(project_dir, next_video_data_time)
-    next_video_name = make_video_name(next_video_data_time)
-    return join(project_dir, DIR_VIDEO_OUTPUT, next_video_name)
+def get_output_file_path():
+    last_video_date_time = get_last_video_date_time()
+    next_video_date_time = get_next_video_date_time(last_video_date_time)
+    save_next_video_date_time(next_video_date_time)
+    next_video_name = make_video_name(next_video_date_time)
+    return join(settings.project_dir, DIR_VIDEO_OUTPUT, next_video_name)
 
 
-def make_video_name(data_time):
-    return '{}.{}'.format(to_date_time_to_str(data_time), VIDEO_EXT)
+def make_video_name(date_time):
+    return '{}.{}'.format(to_date_time_to_str(date_time), VIDEO_EXT)
 
 
-def save_next_video_data_time(project_dir, data_time):
-    str_date_time = to_date_time_to_str(data_time)
-    write_file(get_last_video_file_data_path(project_dir), str_date_time)
+def save_next_video_date_time(next_video_date_time):
+    next_video_date_time_str = to_date_time_to_str(next_video_date_time)
+    video_data = read_video_data()
+    video_data[LAST_VIDEO_DATA_KEY] = next_video_date_time_str
+    write_video_data(video_data)
 
 
-def to_date_time_to_str(data_time):
-    return datetime.strftime(data_time, DATETIME_FORMAT)
+def get_last_video_time():
+    return str_to_date_time(read_video_data()[LAST_VIDEO_DATA_KEY])
+
+def to_date_time_to_str(date_time):
+    return datetime.strftime(date_time, DATETIME_FORMAT)
 
 
 def str_to_date_time(str_date_time):
@@ -186,8 +192,7 @@ def get_next_time(date_time):
     return get_first_schedule_time()
 
 
-def get_next_video_data_time(last_video_data_time_str):
-    last_video_date_time = str_to_date_time(last_video_data_time_str)
+def get_next_video_date_time(last_video_date_time):
     next_date = get_next_date(last_video_date_time)
     next_time = get_next_time(last_video_date_time)
     return datetime.combine(next_date, next_time)
@@ -199,22 +204,6 @@ def filter_file_by_ext(files_list, filter_ext):
         if filter_ext in f:
             filtered_files.append(f)
     return filtered_files
-
-
-def mv_file(file_path, dir):
-    replace(file_path, dir)
-
-
-def read_file(path):
-    if not isfile(path):
-        return None
-    with open(path) as f:
-        return f.read()
-
-
-def write_file(path, data):
-    with open(path, 'w') as f:
-        return f.write(data)
 
 
 def do_shell_command(ffmpeg_shell_command):
