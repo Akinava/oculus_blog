@@ -1,6 +1,7 @@
-from os import walk, system, replace
+from os import system, replace
 from os.path import join, isfile
 from datetime import datetime, timedelta
+from utility import get_files_list
 from settings import (
     logger,
     DIR_VIDEO_INPUT,
@@ -23,7 +24,7 @@ FAIL = 1
 def cat_video(project_dir):
     logger.info('project_dir: {}'.format(project_dir))
     dir_input_video = get_dir_input_video(project_dir)
-    video_files_list = get_files_list(dir_input_video)
+    video_files_list = filter_file_by_ext(get_files_list(dir_input_video), VIDEO_EXT)
     for video_file_name in video_files_list:
         result = cat_video_by_timing(project_dir, video_file_name)
         mv_result_files(result, project_dir, video_file_name)
@@ -108,12 +109,6 @@ def make_ffmpeg_shell_command(project_dir, input_video_file_path, start_time, fi
         input_video_file_path=input_video_file_path,
         output_file_path=output_file_path
     )
-    # return 'echo "{input_video_file_path} {start_time} {finish_time}" > "{output_file_path}"'.format(
-    #     input_video_file_path=input_video_file_path,
-    #     start_time=start_time,
-    #     finish_time=finish_time,
-    #     output_file_path=output_file_path,
-    # )
 
 
 def get_last_video_file_data_path(project_dir):
@@ -196,11 +191,6 @@ def get_next_video_data_time(last_video_data_time_str):
     next_date = get_next_date(last_video_date_time)
     next_time = get_next_time(last_video_date_time)
     return datetime.combine(next_date, next_time)
-
-
-def get_files_list(dir):
-    for _, _, files_list in walk(dir):
-        return filter_file_by_ext(files_list, VIDEO_EXT)
 
 
 def filter_file_by_ext(files_list, filter_ext):

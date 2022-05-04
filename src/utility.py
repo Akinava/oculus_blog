@@ -1,4 +1,12 @@
 import sys
+from os import walk, replace
+from os.path import join, isfile
+import json
+
+
+def get_files_list(dir):
+    for _, _, files_list in walk(dir):
+        return files_list
 
 
 def get_project_dir():
@@ -7,6 +15,35 @@ def get_project_dir():
         logger.error('project dir required, run app: "{} poject_dir"'.format(sys.argv[0]))
         exit(1)
     return sys.argv[1]
+
+
+def get_video_data_path():
+    import settings
+    return join(settings.project_dir, settings.VIDEO_DATA_FILE_NAME)
+
+
+def read_video_data():
+    return json.loads(read_file(get_video_data_path()))
+
+
+def write_video_data(video_data):
+    write_file(get_video_data_path(), json.dumps(video_data, indent=4))
+
+
+def read_file(path):
+    if not isfile(path):
+        return None
+    with open(path) as f:
+        return f.read()
+
+
+def write_file(path, data):
+    with open(path, 'w') as f:
+        return f.write(data)
+
+
+def mv_file(file_path, dir):
+    replace(file_path, dir)
 
 
 def setup_logger():
