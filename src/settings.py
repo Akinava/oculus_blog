@@ -7,6 +7,8 @@ SCHEDULE = [
     # '18:00',
 ]
 
+CLIENT_SECRET_FILE = 'client_secret.json'
+TOKEN_FILE = 'token.pickle'
 VIDEO_DATA_FILE_NAME = 'video_data.json'
 LAST_VIDEO_DATA_KEY = 'last_video'
 DIR_VIDEO_INPUT = 'input'
@@ -23,6 +25,11 @@ FORISMATIC_API_DELAY = 2
 VIDEO_REQUEST_BODY_KEY = 'video_request_body'
 VIDEO_TITLE_PLACE = ['snippet', 'title']
 VIDEO_PUBLISH_AT_PLACE = ['status', 'publishAt']
+# VIDEO_POST_MAX = 5
+VIDEO_POST_MAX = 1  # FIXME
+YOUTUBE_API_SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
+YOUTUBE_API_VERSION = 'v3'
+YOUTUBE_API_SERVICE = 'youtube'
 logging_level = logging.INFO
 logging_format = '%(asctime)s : %(levelname)s: %(threadName)s : %(module)s : %(funcName)s : %(message)s'
 

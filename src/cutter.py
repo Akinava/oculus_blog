@@ -1,13 +1,6 @@
 from os import system
 from os.path import join
 from datetime import datetime, timedelta
-from utility import (
-    get_files_list,
-    read_file,
-    read_video_data,
-    write_video_data,
-    mv_file,
-)
 import settings
 from settings import (
     logger,
@@ -21,6 +14,15 @@ from settings import (
     SCHEDULE,
     LAST_VIDEO_DATA_KEY,
     DATETIME_FORMAT,
+)
+from utility import (
+    get_files_list,
+    read_file,
+    read_video_data,
+    write_video_data,
+    mv_file,
+    str_to_date_time,
+    get_project_dir,
 )
 
 
@@ -133,11 +135,11 @@ def get_output_file_path():
 
 
 def make_video_name(date_time):
-    return '{}.{}'.format(to_date_time_to_str(date_time), VIDEO_EXT)
+    return '{}.{}'.format(date_time_to_str(date_time), VIDEO_EXT)
 
 
 def save_next_video_date_time(next_video_date_time):
-    next_video_date_time_str = to_date_time_to_str(next_video_date_time)
+    next_video_date_time_str = date_time_to_str(next_video_date_time)
     video_data = read_video_data()
     video_data[LAST_VIDEO_DATA_KEY] = next_video_date_time_str
     write_video_data(video_data)
@@ -146,12 +148,8 @@ def save_next_video_date_time(next_video_date_time):
 def get_last_video_time():
     return str_to_date_time(read_video_data()[LAST_VIDEO_DATA_KEY])
 
-def to_date_time_to_str(date_time):
+def date_time_to_str(date_time):
     return datetime.strftime(date_time, DATETIME_FORMAT)
-
-
-def str_to_date_time(str_date_time):
-    return datetime.strptime(str_date_time, DATETIME_FORMAT)
 
 
 def get_schedule():
@@ -209,3 +207,10 @@ def filter_file_by_ext(files_list, filter_ext):
 def do_shell_command(ffmpeg_shell_command):
     logger.info('run shell command | {}'.format(ffmpeg_shell_command))
     system(ffmpeg_shell_command)
+
+
+if __name__ == '__main__':
+    logger.info('app start')
+    settings.project_dir = get_project_dir()
+    cat_video()
+    logger.info('app stop')

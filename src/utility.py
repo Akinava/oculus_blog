@@ -2,6 +2,12 @@ import sys
 from os import walk, replace
 from os.path import join, isfile
 import json
+from datetime import datetime
+
+
+def str_to_date_time(str_date_time):
+    import settings
+    return datetime.strptime(str_date_time, settings.DATETIME_FORMAT)
 
 
 def get_files_list(dir):
