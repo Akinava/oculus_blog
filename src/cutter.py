@@ -211,6 +211,5 @@ def do_shell_command(ffmpeg_shell_command):
 
 if __name__ == '__main__':
     logger.info('app start')
-    settings.project_dir = get_project_dir()
     cat_video()
     logger.info('app stop')

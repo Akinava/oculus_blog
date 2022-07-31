@@ -5,6 +5,19 @@ import json
 from datetime import datetime
 
 
+def get_metadata_file_path():
+    import settings
+    return join(settings.project_dir, settings.METADATA_FILE_NAME)
+
+
+def read_metadata():
+    return read_json(get_metadata_file_path())
+
+
+def save_metadata(data):
+    write_json(get_metadata_file_path(), data)
+
+
 def str_to_date_time(str_date_time):
     import settings
     return datetime.strptime(str_date_time, settings.DATETIME_FORMAT)
@@ -15,25 +28,23 @@ def get_files_list(dir):
         return files_list
 
 
-def get_project_dir():
-    from settings import logger
-    if len(sys.argv) < 2:
-        logger.error('project dir required, run app: "{} poject_dir"'.format(sys.argv[0]))
-        exit(1)
-    return sys.argv[1]
-
-
-def get_video_data_path():
+def set_project_dir():
     import settings
-    return join(settings.project_dir, settings.VIDEO_DATA_FILE_NAME)
+    if len(sys.argv) < 2:
+        settings.logger.error('project dir required, run app: "{} poject_dir"'.format(sys.argv[0]))
+        exit(1)
+    settings.project_dir = sys.argv[1]
 
 
-def read_video_data():
-    return json.loads(read_file(get_video_data_path()))
+def read_json(path):
+    data = read_file(path)
+    if data is None:
+        return data
+    return json.loads(data)
 
 
-def write_video_data(video_data):
-    write_file(get_video_data_path(), json.dumps(video_data, indent=4))
+def write_json(path, data):
+    write_file(path, json.dumps(data, indent=4))
 
 
 def read_file(path):
