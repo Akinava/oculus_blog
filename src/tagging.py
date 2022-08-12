@@ -1,3 +1,4 @@
+import uuid
 from os.path import join
 import settings
 from settings import (
@@ -42,7 +43,7 @@ def tag_video():
         print('chosen', mark)
         new_file_path = join(
             get_dir_path(DIR_NAME_VIDEO_TAGGED),
-            '{}_{}.mp4'.format(mark, files_list.index(file_name)))
+            '{}_{}.mp4'.format(mark, uuid.uuid4().hex))
         mv_file(file_path, new_file_path)
 
 
