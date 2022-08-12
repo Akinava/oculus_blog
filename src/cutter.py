@@ -1,4 +1,3 @@
-from os import system
 from os.path import join
 from datetime import datetime, timedelta
 import settings
@@ -32,7 +31,7 @@ FAIL = 1
 
 def cat_video():
     logger.info('project_dir: {}'.format(settings.project_dir))
-    dir_input_video = get_dir_input_video()
+    dir_input_video = get_dir_path(DIR_VIDEO_INPUT)
     video_files_list = filter_file_by_ext(get_files_list(dir_input_video), VIDEO_EXT)
     for video_file_name in video_files_list:
         result = cat_video_by_timing(video_file_name)
@@ -59,10 +58,6 @@ def get_result_file_path(result, video_file_name):
 
 def get_timing_file_name(video_file_name):
     return video_file_name.replace(VIDEO_EXT, TIMING_EXT)
-
-
-def get_dir_input_video():
-    return join(settings.project_dir, DIR_VIDEO_INPUT)
 
 
 def get_video_file_path(video_file_name):
@@ -202,11 +197,6 @@ def filter_file_by_ext(files_list, filter_ext):
         if filter_ext in f:
             filtered_files.append(f)
     return filtered_files
-
-
-def do_shell_command(ffmpeg_shell_command):
-    logger.info('run shell command | {}'.format(ffmpeg_shell_command))
-    system(ffmpeg_shell_command)
 
 
 if __name__ == '__main__':

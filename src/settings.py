@@ -2,20 +2,12 @@ import logging
 from utility import setup_logger, set_project_dir
 
 
-# SCHEDULE = [
-#     '12:00',
-#     '18:00',
-# ]
-
 CLIENT_SECRET_FILE = 'client_secret.json'
 CREDENTIALS_PICKLE_FILE = 'credentials.pickle'
 METADATA_FILE_NAME = 'metadata.json'
 
-DIR_VIDEO_INPUT = 'input'
-DIR_VIDEO_OUTPUT = 'output'
-DIR_VIDEO_DONE = 'done'
-DIR_VIDEO_FAIL = 'output'
-DIR_VIDEO_POSTED = 'posted'
+DIR_NAME_VIDEO_RAW = '0.raw'
+DIR_NAME_VIDEO_TAGGED = '1.tagged'
 
 VIDEO_EXT = 'mp4'
 TIMING_EXT = 'txt'

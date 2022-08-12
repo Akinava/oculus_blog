@@ -1,5 +1,5 @@
 import sys
-from os import walk, replace
+from os import walk, replace, system
 from os.path import join, isfile
 import json
 from datetime import datetime
@@ -28,8 +28,15 @@ def get_files_list(dir):
         return files_list
 
 
+def get_dir_path(dir_name):
+    import settings
+    return join(settings.project_dir, dir_name)
+
+
 def set_project_dir():
     import settings
+    if hasattr(settings, 'project_dir'):
+        return
     if len(sys.argv) < 2:
         settings.logger.error('project dir required, run app: "{} poject_dir"'.format(sys.argv[0]))
         exit(1)
@@ -63,9 +70,17 @@ def mv_file(file_path, dir):
     replace(file_path, dir)
 
 
-def setup_logger():
-    import logging
+def do_shell_command(ffmpeg_shell_command):
     import settings
+    settings.logger.info('run shell command | {}'.format(ffmpeg_shell_command))
+    system(ffmpeg_shell_command)
+
+
+def setup_logger():
+    import settings
+    if hasattr(settings, 'logger'):
+        return
+    import logging
     settings.logger = logging.getLogger(__name__)
     settings.logger.setLevel(settings.logging_level)
     handler = logging.StreamHandler(sys.stdout)

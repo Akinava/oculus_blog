@@ -221,11 +221,19 @@ def post_video(orig_video_body):
     insert_video_to_playlist(video_id, playlist_id)
 
 
+def get_video_description(video_id):
+    youtube = authenticate()
+    return youtube.videos().list(
+        part="snippet,status",
+        id=video_id
+    ).execute()
+
+
 if __name__ == '__main__':
     all_videos = get_all_videos()
     all_private_videos = filter_private(all_videos)
     videos = filter_scheduled(all_private_videos)
-
+    #
     # # FIXME
     # from utility import write_json, read_json
     # write_json('../tmp/all_private_videos.json', videos)
@@ -235,3 +243,18 @@ if __name__ == '__main__':
         log_line = get_video_log_line(video)
         logger.info('{}-{} {}'.format(len(videos), videos.index(video), log_line))
         post_video(video)
+
+
+    # my_list = [
+    #     'jXxfAymTi-Y',
+    # ]
+    #
+    # for x in my_list:
+    #     video = get_video_description(x)
+    #     item = video['items'][0]
+    #     orig_video_body = {
+    #         'snippet': {'title': item['snippet']['title']},
+    #         'contentDetails': {'videoId': item['id']},
+    #     }
+    #     logger.info(get_video_log_line(orig_video_body))
+    #     post_video(orig_video_body)
