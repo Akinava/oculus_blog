@@ -7,7 +7,7 @@ from settings import (
     DIR_NAME_VIDEO_TAGGED,
 )
 from utility import (
-    get_dir_path,
+    get_data_dir_path,
     get_files_list,
     do_shell_command,
     read_metadata,
@@ -28,21 +28,21 @@ def make_help_print(marks):
 
 
 def tag_video():
-    dir_raw_video = get_dir_path(DIR_NAME_VIDEO_RAW)
+    dir_raw_video = get_data_dir_path(DIR_NAME_VIDEO_RAW)
     marks = get_marks()
     help_print = make_help_print(marks)
     files_list = get_files_list(dir_raw_video)
     for file_name in files_list:
         file_path = join(dir_raw_video, file_name)
-        print(file_path)
+        logger.info(file_path)
         do_shell_command('mplayer {}'.format(file_path))
         print('choose tag', '=' * 10)
         print(help_print)
         tag_index = input()
         mark = marks[int(tag_index)-1]
-        print('chosen', mark)
+        logger.info('chosen', mark)
         new_file_path = join(
-            get_dir_path(DIR_NAME_VIDEO_TAGGED),
+            get_data_dir_path(DIR_NAME_VIDEO_TAGGED),
             '{}_{}.mp4'.format(mark, uuid.uuid4().hex))
         mv_file(file_path, new_file_path)
 

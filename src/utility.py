@@ -18,17 +18,15 @@ def save_metadata(data):
     write_json(get_metadata_file_path(), data)
 
 
-def str_to_date_time(str_date_time):
-    import settings
-    return datetime.strptime(str_date_time, settings.DATETIME_FORMAT)
-
-
 def get_files_list(dir):
-    for _, _, files_list in walk(dir):
-        return files_list
+    return next(walk(dir))[2]
 
 
-def get_dir_path(dir_name):
+def get_subdir_list(dir):
+    return next(walk(dir))[1]
+
+
+def get_data_dir_path(dir_name):
     import settings
     return join(settings.project_dir, dir_name)
 
