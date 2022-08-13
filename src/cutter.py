@@ -203,17 +203,18 @@ def scheduling_video():
         save_next_video_date_time(video_file_name)
 
 
-def get_to_post_sub_dir():
+def get_to_post_sub_dir(video_file_name):
     to_post_dir_path = get_data_dir_path(DIR_NAME_VIDEO_TO_POST)
     subdir_list = get_subdir_list(to_post_dir_path)
     for subdir_name in subdir_list:
         if len(get_files_list(join(to_post_dir_path, subdir_name))) < MAX_FILES_TO_POST:
             return subdir_name
-    return make_to_post_subdir()
+    return make_to_post_subdir(video_file_name)
 
 
-def make_to_post_subdir():
-    subdir_name = uuid.uuid4().hex[:8]
+def make_to_post_subdir(video_file_name):
+    next_date = get_next_date_time(video_file_name)[:10]
+    subdir_name = '{}_{}'.format(next_date, uuid.uuid4().hex[:8])
     to_post_dir_path = get_data_dir_path(DIR_NAME_VIDEO_TO_POST)
     while subdir_name in get_subdir_list(to_post_dir_path):
         subdir_name = uuid.uuid4().hex[:8]
@@ -223,7 +224,7 @@ def make_to_post_subdir():
 
 def mv_video_to_post_dir(video_file_name):
     input_video_file_path = get_input_video_file_path(video_file_name)
-    sub_dir = get_to_post_sub_dir()
+    sub_dir = get_to_post_sub_dir(video_file_name)
     to_post_video_file_path = get_to_post_video_file_path(video_file_name, sub_dir)
     mv_file(input_video_file_path, to_post_video_file_path)
 
@@ -288,6 +289,6 @@ def make_next_video_date_time(video_file_name):
 if __name__ == '__main__':
     logger.info('app start')
     logger.info('project_dir: {}'.format(settings.project_dir))
-    # cat_video()
+    cat_video()
     scheduling_video()
     logger.info('app stop')
