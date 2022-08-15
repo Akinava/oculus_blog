@@ -71,7 +71,7 @@ def get_to_post_video_file_path(video_file_name, sub_dir):
         settings.project_dir,
         DIR_NAME_VIDEO_TO_POST,
         sub_dir,
-        '{}_{}.{}'.format(mark, next_date, VIDEO_EXT)
+        '{}_{}.{}'.format(next_date, mark, VIDEO_EXT)
     )
 
 

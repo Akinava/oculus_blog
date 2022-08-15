@@ -2,8 +2,10 @@ import os
 import pickle
 import requests
 import json
+import random
 from time import sleep
 from os.path import join
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
@@ -40,25 +42,41 @@ def save_credentials(credentials):
 
 
 def update_credentials(credentials):
+    if credentials and credentials.expired and credentials.refresh_token:
+        try:
+            credentials.refresh(Request())
+        except RefreshError:
+            logger.warning('Token has been expired or revoked.')
+            return make_credentials()
+    return credentials
+
+
+def make_credentials():
     scopes = [
         "https://www.googleapis.com/auth/youtube.readonly",
         "https://www.googleapis.com/auth/youtube",
         "https://www.googleapis.com/auth/youtube.force-ssl"]
-    if credentials and credentials.expired and credentials.refresh_token:
-        credentials.refresh(Request())
-    else:
-        flow = InstalledAppFlow.from_client_secrets_file(
-            get_client_secrets_file(),
-            scopes)
-        credentials = flow.run_local_server(port=0)
+    flow = InstalledAppFlow.from_client_secrets_file(
+        get_client_secrets_file(),
+        scopes)
+    credentials = flow.run_local_server(port=0)
     return credentials
 
 
 def get_credentials():
     credentials = load_credentials()
-    if not credentials or not credentials.valid:
-        credentials = update_credentials(credentials)
-        save_credentials(credentials)
+
+    if credentials is None:
+        credentials = make_credentials()
+
+    else:
+        if credentials.valid:
+            return credentials
+
+        if credentials.expired and credentials.refresh_token:
+            credentials = update_credentials(credentials)
+
+    save_credentials(credentials)
     return credentials
 
 
@@ -154,9 +172,10 @@ def get_title(language):
     title = ''
     while len(title) < 1 or len(title) > 100:
         try:
-            title = requests.get(FORISMATIC_API_URL.format(language)).json()['quoteText']
+            title = requests.get(FORISMATIC_API_URL.format(language)).json()['quoteText'].strip()
         except (json.decoder.JSONDecodeError, ) as e:
             logger.warning('fail to get title, exception {}'.format(e))
+            sleep(FORISMATIC_API_DELAY)
         if len(title) > 100:
             sleep(FORISMATIC_API_DELAY)
     return title
@@ -166,58 +185,76 @@ def get_video_id(video_body):
     return video_body['contentDetails']['videoId']
 
 
-def get_mark_and_publish_time(video_body):
+def get_video_title(video_body):
     return video_body['snippet']['title']
 
 
-def find_metadata_by_mark(orig_video_body):
-    mark_and_publish_time = get_mark_and_publish_time(orig_video_body)
-    marks_metadata = read_metadata()['marks']
-    for mark, metadata in marks_metadata.items():
-        if mark in mark_and_publish_time:
-            return metadata
-    raise ValueError('Error: no metadata for video title {}'.format(mark_and_publish_time))
+def add_emoji(snippet_title, video_title):
+    if len(snippet_title) >= 98:
+        return snippet_title
+    metadata = get_metadata(video_title)
+    emoji_list = metadata['emoji']
+    if len(emoji_list) == 1:
+        emoji = emoji_list[0]
+    else:
+        emoji = random.choice(emoji_list)
+    return emoji + ' ' + snippet_title
+
+
+def get_mark(data):
+    marks = list(read_metadata()['marks'].keys())
+    for mark in marks:
+        if mark in data:
+            return mark
+    raise Error('Error: no mark in data {}'.format(data))
+
+
+def get_metadata(video_title):
+    mark = get_mark(video_title)
+    return read_metadata()['marks'][mark]
 
 
 def get_language(metadata):
     return metadata['video_body']['snippet']['defaultAudioLanguage']
 
 
-def get_playlist_id(metadata):
+def get_playlist_id(video_title):
+    metadata = get_metadata(video_title)
     return metadata['playlistId']
 
 
-def get_publish_at(orig_video_body):
-    mark_and_publish_time = get_mark_and_publish_time(orig_video_body)
-    s = list(mark_and_publish_time)
-    s[4] = '-'
-    s[7] = '-'
-    s[10] = 'T'
-    s = s[:16]
+def get_publish_at(video_title):
+    date_time_str = video_title.split(' ', 1)[1:][0]
+    s = list(date_time_str)
+    s[4], s[7], s[10], s[13] = '-', '-', 'T', ':'
     return ''.join(s) + ':00+02:00'
 
 
-def make_video_body(orig_video_body, metadata):
+def make_video_body(video_id, video_title):
+    metadata = get_metadata(video_title)
     language = get_language(metadata)
+    snippet_title = get_title(language)
+    snippet_title = add_emoji(snippet_title, video_title)
     video_body = metadata['video_body']
-    video_body['id'] = get_video_id(orig_video_body)
-    video_body['snippet']['title'] = get_title(language)
-    video_body['status']['publishAt'] = get_publish_at(orig_video_body)
+    video_body['id'] = video_id
+    video_body['snippet']['title'] = snippet_title
+    video_body['status']['publishAt'] = get_publish_at(video_title)
     return video_body
 
 
 def get_video_log_line(orig_video_body):
     video_id = get_video_id(orig_video_body)
-    mark_and_publish_time = get_mark_and_publish_time(orig_video_body)
-    return 'https://studio.youtube.com/video/{}/edit {}'.format(video_id, mark_and_publish_time)
+    video_title = get_video_title(orig_video_body)
+    return 'https://studio.youtube.com/video/{}/edit {}'.format(video_id, video_title)
 
 
-def post_video(orig_video_body):
-    metadata = find_metadata_by_mark(orig_video_body)
-    video_body = make_video_body(orig_video_body, metadata)
+def post_video(video_id, video_title):
+    video_body = make_video_body(video_id, video_title)
+    playlist_id = get_playlist_id(video_title)
+
+    print(playlist_id, video_body)
+
     update_video(video_body)
-    video_id = get_video_id(orig_video_body)
-    playlist_id = get_playlist_id(metadata)
     insert_video_to_playlist(video_id, playlist_id)
 
 
@@ -233,28 +270,22 @@ if __name__ == '__main__':
     all_videos = get_all_videos()
     all_private_videos = filter_private(all_videos)
     videos = filter_scheduled(all_private_videos)
-    #
-    # # FIXME
+
+    # FIXME
     # from utility import write_json, read_json
-    # write_json('../tmp/all_private_videos.json', videos)
-    # videos = read_json('../tmp/all_private_videos.json')
+    # write_json('tmp/all_private_videos.json', all_videos)
+    # exit()
+    # videos = read_json('tmp/all_private_videos.json')
 
-    for video in videos:
-        log_line = get_video_log_line(video)
-        logger.info('{}-{} {}'.format(len(videos), videos.index(video), log_line))
-        post_video(video)
+    # DEBUG
+    # post_video('hhBEY8ZxAV8', 'Lis 2022 09 03 12 00')
 
-
-    # my_list = [
-    #     'jXxfAymTi-Y',
-    # ]
-    #
-    # for x in my_list:
-    #     video = get_video_description(x)
-    #     item = video['items'][0]
-    #     orig_video_body = {
-    #         'snippet': {'title': item['snippet']['title']},
-    #         'contentDetails': {'videoId': item['id']},
-    #     }
-    #     logger.info(get_video_log_line(orig_video_body))
-    #     post_video(orig_video_body)
+    for video_body in videos:
+        video_id = get_video_id(video_body)
+        video_title = get_video_title(video_body)
+        logger.info('{}-{} https://studio.youtube.com/video/{}/edit {}'.format(
+            len(videos),
+            videos.index(video_body)+1,
+            video_id,
+            video_title))
+        post_video(video_id, video_title)
