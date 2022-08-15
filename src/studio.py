@@ -175,9 +175,9 @@ def get_title(language):
             title = requests.get(FORISMATIC_API_URL.format(language)).json()['quoteText'].strip()
         except (json.decoder.JSONDecodeError, ) as e:
             logger.warning('fail to get title, exception {}'.format(e))
-            sleep(FORISMATIC_API_DELAY)
         if len(title) > 100:
-            sleep(FORISMATIC_API_DELAY)
+            continue
+        sleep(FORISMATIC_API_DELAY)
     return title
 
 
