@@ -24,6 +24,7 @@ def make_help_print(marks):
     help_print = []
     for mark in marks:
         help_print.append('{}-{}'.format(marks.index(mark)+1, mark))
+    help_print.append('0-skip')
     return '\n'.join(help_print)
 
 
@@ -35,10 +36,12 @@ def tag_video():
     for file_name in files_list:
         file_path = join(dir_raw_video, file_name)
         logger.info(file_path)
-        do_shell_command('mplayer {}'.format(file_path))
+        do_shell_command('mplayer "{}"'.format(file_path))
         print('choose tag', '=' * 10)
         print(help_print)
         tag_index = input()
+        if int(tag_index) == 0:
+            continue
         mark = marks[int(tag_index)-1]
         logger.info('chosen', mark)
         new_file_path = join(
