@@ -11,6 +11,13 @@ def get_marks():
     return list(marks_metadata.keys())
 
 
+def get_mark(data):
+    for mark in get_marks():
+        if mark in data:
+            return mark
+    raise Error("Error: mark not found in video file name {}".format(data))
+
+
 def get_uuid_time():
     return int(time.time() * 10**4 % 10**10)
 

@@ -18,6 +18,7 @@ from settings import (
 from utility import (
     read_metadata,
     save_metadata,
+    get_mark,
 )
 
 
@@ -190,23 +191,15 @@ def get_video_title(video_body):
 
 
 def add_emoji(snippet_title, video_title):
-    if len(snippet_title) >= 98:
-        return snippet_title
     metadata = get_metadata(video_title)
     emoji_list = metadata['emoji']
     if len(emoji_list) == 1:
         emoji = emoji_list[0]
     else:
         emoji = random.choice(emoji_list)
+    if len(emoji + ' ' + snippet_title) > 100:
+        return snippet_title
     return emoji + ' ' + snippet_title
-
-
-def get_mark(data):
-    marks = list(read_metadata()['marks'].keys())
-    for mark in marks:
-        if mark in data:
-            return mark
-    raise Error('Error: no mark in data {}'.format(data))
 
 
 def get_metadata(video_title):
@@ -224,7 +217,8 @@ def get_playlist_id(video_title):
 
 
 def get_publish_at(video_title):
-    date_time_str = video_title.split(' ', 1)[1:][0]
+    mark = get_mark(video_title)
+    date_time_str = video_title.replace(mark, '').strip()
     s = list(date_time_str)
     s[4], s[7], s[10], s[13] = '-', '-', 'T', ':'
     return ''.join(s) + ':00+02:00'
@@ -251,34 +245,15 @@ def get_video_log_line(orig_video_body):
 def post_video(video_id, video_title):
     video_body = make_video_body(video_id, video_title)
     playlist_id = get_playlist_id(video_title)
-
     print(playlist_id, video_body)
-
     update_video(video_body)
     insert_video_to_playlist(video_id, playlist_id)
-
-
-def get_video_description(video_id):
-    youtube = authenticate()
-    return youtube.videos().list(
-        part="snippet,status",
-        id=video_id
-    ).execute()
 
 
 if __name__ == '__main__':
     all_videos = get_all_videos()
     all_private_videos = filter_private(all_videos)
     videos = filter_scheduled(all_private_videos)
-
-    # FIXME
-    # from utility import write_json, read_json
-    # write_json('tmp/all_private_videos.json', all_videos)
-    # exit()
-    # videos = read_json('tmp/all_private_videos.json')
-
-    # DEBUG
-    # post_video('hhBEY8ZxAV8', 'Lis 2022 09 03 12 00')
 
     for video_body in videos:
         video_id = get_video_id(video_body)

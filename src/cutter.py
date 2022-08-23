@@ -23,7 +23,7 @@ from utility import (
     read_metadata,
     save_metadata,
     get_uuid_time,
-    get_marks,
+    get_mark,
     write_file,
 )
 
@@ -158,13 +158,6 @@ def make_ffmpeg_shell_command(input_video_file_path, output_video_file_path, sta
         input_video_file_path=input_video_file_path,
         output_video_file_path=output_video_file_path
     )
-
-
-def get_mark(video_file_name):
-    for mark in get_marks():
-        if mark in video_file_name:
-            return mark
-    raise Error("Error: mark not found in video file name {}".format(video_file_name))
 
 
 def mark_in_video_file_name(video_file_name):
