@@ -350,7 +350,7 @@ def add_closings(video_file_name):
 if __name__ == '__main__':
     logger.info('app start')
     logger.info('project_dir: {}'.format(settings.project_dir))
-    # cat_video()
-    # add_cover()
+    cat_video()
+    add_cover()
     scheduling_video()
     logger.info('app stop')
