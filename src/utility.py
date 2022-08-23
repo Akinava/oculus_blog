@@ -3,6 +3,16 @@ from os import walk, replace, system
 from os.path import join, isfile
 import json
 from datetime import datetime
+import time
+
+
+def get_marks():
+    marks_metadata = read_metadata()['marks']
+    return list(marks_metadata.keys())
+
+
+def get_uuid_time():
+    return int(time.time() * 10**4 % 10**10)
 
 
 def get_metadata_file_path():

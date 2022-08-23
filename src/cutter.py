@@ -1,5 +1,4 @@
-import uuid
-from os import walk, mkdir
+from os import walk, mkdir, remove
 from os.path import join, isfile, isdir
 from datetime import datetime, timedelta
 import settings
@@ -12,6 +11,7 @@ from settings import (
     DIR_NAME_VIDEO_TIMING_PROCESSED,
     DATETIME_FORMAT,
     MAX_FILES_TO_POST,
+    DIR_NAME_VIDEO_CLIPPED,
 )
 from utility import (
     get_files_list,
@@ -22,6 +22,9 @@ from utility import (
     do_shell_command,
     read_metadata,
     save_metadata,
+    get_uuid_time,
+    get_marks,
+    write_file,
 )
 
 
@@ -43,7 +46,6 @@ def cat_video():
 def mv_processed_files(video_file_name):
     input_video_file_path = get_input_video_file_path(video_file_name)
     processed_video_file_path = get_processed_video_file_path(video_file_name)
-
     input_timing_file_path = get_input_timing_file_path(video_file_name)
     processed_timing_file_path = get_processed_timing_file_path(video_file_name)
     mv_file(input_video_file_path, processed_video_file_path)
@@ -61,6 +63,13 @@ def get_processed_video_file_path(video_file_name):
     return join(
         settings.project_dir,
         DIR_NAME_VIDEO_TIMING_PROCESSED,
+        video_file_name)
+
+
+def get_clipped_video_file_path(video_file_name):
+    return join(
+        settings.project_dir,
+        DIR_NAME_VIDEO_CLIPPED,
         video_file_name)
 
 
@@ -106,7 +115,7 @@ def get_output_video_file_path(video_file_name):
     return join(
         settings.project_dir,
         DIR_NAME_VIDEO_TIMED,
-        '{}_{}.{}'.format(mark, uuid.uuid4().hex, VIDEO_EXT))
+        '{}_{}.{}'.format(get_uuid_time(), mark, VIDEO_EXT))
 
 
 def get_timing_lines(timing_data):
@@ -152,7 +161,10 @@ def make_ffmpeg_shell_command(input_video_file_path, output_video_file_path, sta
 
 
 def get_mark(video_file_name):
-    return video_file_name.split('_')[0]
+    for mark in get_marks():
+        if mark in video_file_name:
+            return mark
+    raise Error("Error: mark not found in video file name {}".format(video_file_name))
 
 
 def mark_in_video_file_name(video_file_name):
@@ -214,10 +226,8 @@ def get_to_post_sub_dir(video_file_name):
 
 def make_to_post_subdir(video_file_name):
     next_date = get_next_date_time(video_file_name)[:10]
-    subdir_name = '{}_{}'.format(next_date, uuid.uuid4().hex[:8])
     to_post_dir_path = get_data_dir_path(DIR_NAME_VIDEO_TO_POST)
-    while subdir_name in get_subdir_list(to_post_dir_path):
-        subdir_name = uuid.uuid4().hex[:8]
+    subdir_name = '{}_{}'.format(next_date, get_uuid_time())
     mkdir(join(to_post_dir_path, subdir_name))
     return subdir_name
 
@@ -286,9 +296,61 @@ def make_next_video_date_time(video_file_name):
     return datetime.combine(next_date, next_time)
 
 
+def add_cover():
+    dir_input_video = get_data_dir_path(DIR_NAME_VIDEO_TIMED)
+    video_files_list = get_files_list(dir_input_video)
+    for video_file_name in video_files_list:
+        logger.info(video_file_name)
+        add_closings(video_file_name)
+
+
+def get_closing_files(video_file_name):
+    mark = get_mark(video_file_name)
+    return read_metadata()['marks'][mark].get('closings', [])
+
+
+def mv_input_clipped_file(video_file_name):
+    input_video_file_path = get_input_video_file_path(video_file_name)
+    clipped_video_file_path = get_clipped_video_file_path(video_file_name)
+    mv_file(input_video_file_path, clipped_video_file_path)
+
+
+def make_concat_task_file(input_video_file_path, closing_file_path):
+    fname = 'concat_task.txt'
+    data = "file '{}'\n".format(input_video_file_path)
+    data += "file '{}'\n".format(closing_file_path)
+    write_file(fname, data)
+    return fname
+
+
+def make_concat_shell_command(concat_task_file_path, output_video_file_path):
+    return 'ffmpeg -f concat -i {} -c copy {}'.format(
+        concat_task_file_path,
+        output_video_file_path,
+    )
+
+
+def concat_video(input_video_file_path, closing_file_path, output_video_file_path):
+    concat_task_file_path = make_concat_task_file(input_video_file_path, closing_file_path)
+    concat_shell_command = make_concat_shell_command(concat_task_file_path, output_video_file_path)
+    do_shell_command(concat_shell_command)
+    remove(concat_task_file_path)
+
+
+def add_closings(video_file_name):
+    closing_files = get_closing_files(video_file_name)
+    for closing in closing_files:
+        closing_file_path = join(settings.project_dir, closing)
+        input_video_file_path = get_input_video_file_path(video_file_name)
+        output_video_file_path = get_output_video_file_path(video_file_name)
+        concat_video(input_video_file_path, closing_file_path, output_video_file_path)
+        mv_input_clipped_file(video_file_name)
+
+
 if __name__ == '__main__':
     logger.info('app start')
     logger.info('project_dir: {}'.format(settings.project_dir))
-    cat_video()
+    # cat_video()
+    # add_cover()
     scheduling_video()
     logger.info('app stop')

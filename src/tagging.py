@@ -13,12 +13,8 @@ from utility import (
     read_metadata,
     mv_file,
     get_uuid_time,
+    get_marks,
 )
-
-
-def get_marks():
-    marks_metadata = read_metadata()['marks']
-    return list(marks_metadata.keys())
 
 
 def make_help_print(marks):
