@@ -12,6 +12,7 @@ from utility import (
     do_shell_command,
     read_metadata,
     mv_file,
+    get_uuid_time,
 )
 
 
@@ -43,10 +44,10 @@ def tag_video():
         if int(tag_index) == 0:
             continue
         mark = marks[int(tag_index)-1]
-        logger.info('chosen', mark)
+        logger.info('chosen {}'.format(mark))
         new_file_path = join(
             get_data_dir_path(DIR_NAME_VIDEO_TAGGED),
-            '{}_{}.mp4'.format(mark, uuid.uuid4().hex))
+            '{}_{}.mp4'.format(get_uuid_time(), mark))
         mv_file(file_path, new_file_path)
 
 
