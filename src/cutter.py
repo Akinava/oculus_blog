@@ -25,6 +25,7 @@ from utility import (
     get_uuid_time,
     get_mark,
     write_file,
+    date_create_sort,
 )
 
 
@@ -34,7 +35,9 @@ FAIL = 1
 
 def cat_video():
     dir_input_video = get_data_dir_path(DIR_NAME_VIDEO_TIMED)
-    video_files_list = filter_file_by_ext(get_files_list(dir_input_video), VIDEO_EXT)
+    all_files = get_files_list(dir_input_video)
+    video_files_list = filter_file_by_ext(all_files, VIDEO_EXT)
+    video_files_list = date_create_sort(dir_input_video, video_files_list)
     for video_file_name in video_files_list:
         logger.info(video_file_name)
         if not isfile(get_input_timing_file_path(video_file_name)):
@@ -200,6 +203,7 @@ def str_to_date_time(str_date_time):
 def scheduling_video():
     dir_input_video = get_data_dir_path(DIR_NAME_VIDEO_TIMED)
     video_files_list = get_files_list(dir_input_video)
+    video_files_list = date_create_sort(dir_input_video, video_files_list)
     for video_file_name in video_files_list:
         logger.info(video_file_name)
         if not mark_in_video_file_name(video_file_name):

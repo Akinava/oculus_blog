@@ -1,6 +1,6 @@
 import sys
 from os import walk, replace, system
-from os.path import join, isfile
+from os.path import join, isfile, getmtime, basename
 import json
 from datetime import datetime
 import time
@@ -33,6 +33,12 @@ def read_metadata():
 
 def save_metadata(data):
     write_json(get_metadata_file_path(), data)
+
+
+def date_create_sort(dir, files):
+    files = [join(dir, f) for f in files]
+    files.sort(key=lambda x: getmtime(x))
+    return [basename(f) for f in files]
 
 
 def get_files_list(dir):

@@ -14,6 +14,7 @@ from utility import (
     mv_file,
     get_uuid_time,
     get_marks,
+    date_create_sort,
 )
 
 
@@ -30,10 +31,12 @@ def tag_video():
     marks = get_marks()
     help_print = make_help_print(marks)
     files_list = get_files_list(dir_raw_video)
+    files_list = date_create_sort(dir_raw_video, files_list)
     for file_name in files_list:
         file_path = join(dir_raw_video, file_name)
         logger.info(file_path)
         do_shell_command('mplayer "{}"'.format(file_path))
+        print('file {} - {}'.format(len(files_list), files_list.index(file_name) + 1))
         print('choose tag', '=' * 10)
         print(help_print)
         tag_index = input()
