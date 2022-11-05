@@ -1,6 +1,6 @@
 from os import walk, mkdir, remove
 from os.path import join, isfile, isdir
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import settings
 from settings import (
     logger,
@@ -77,7 +77,7 @@ def get_clipped_video_file_path(video_file_name):
 
 
 def get_to_post_video_file_path(video_file_name, sub_dir):
-    next_date = get_next_date_time(video_file_name)
+    next_date = get_next_date_time_str(video_file_name)
     mark = get_mark(video_file_name)
     return join(
         settings.project_dir,
@@ -187,9 +187,25 @@ def get_metadata_timer_name(video_file_name):
     return name
 
 
-def get_next_date_time(video_file_name):
+def date_in_future(next_date_time):
+    date_time = str_to_date_time(next_date_time)
+    return date_time > datetime.now()
+
+
+def get_schedule_tomorrow(metadata_timers_value):
+    schedule_first = metadata_timers_value['schedule'][0]
+    next_time = datetime.strptime(schedule_first, DATETIME_FORMAT[9:]).time()
+    next_date = date.today() + timedelta(days=1)
+    next_date_time = datetime.combine(next_date, next_time)
+    return date_time_to_str(next_date_time)
+
+
+def get_next_date_time_str(video_file_name):
     value = get_metadata_timer_value(video_file_name)
-    return value['next_date_time']
+    next_date_time = value['next_date_time']
+    if date_in_future(next_date_time):
+        return next_date_time
+    return get_schedule_tomorrow(value)
 
 
 def date_time_to_str(date_time):
@@ -222,7 +238,7 @@ def get_to_post_sub_dir(video_file_name):
 
 
 def make_to_post_subdir(video_file_name):
-    next_date = get_next_date_time(video_file_name)[:10]
+    next_date = get_next_date_time_str(video_file_name)[:10]
     to_post_dir_path = get_data_dir_path(DIR_NAME_VIDEO_TO_POST)
     subdir_name = '{}_{}'.format(next_date, get_uuid_time())
     mkdir(join(to_post_dir_path, subdir_name))
@@ -246,7 +262,7 @@ def save_next_video_date_time(video_file_name):
 
 
 def make_next_date(video_file_name):
-    last_video_date_time = str_to_date_time(get_next_date_time(video_file_name))
+    last_video_date_time = str_to_date_time(get_next_date_time_str(video_file_name))
     if last_video_date_time.time() < get_last_schedule_time(video_file_name):
         return extract_current_date(last_video_date_time)
     return extract_next_date(last_video_date_time)
@@ -280,7 +296,7 @@ def get_schedule(video_file_name):
 
 def make_next_time(video_file_name):
     schedule = get_schedule(video_file_name)
-    last_video_date_time = str_to_date_time(get_next_date_time(video_file_name))
+    last_video_date_time = str_to_date_time(get_next_date_time_str(video_file_name))
     for t in schedule:
         if last_video_date_time.time() < t:
             return t
