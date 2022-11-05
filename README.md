@@ -7,7 +7,7 @@ mv Video/1.tagged/*_laser.mp4 Video/2.timed/
 for x in $(ls Video/2.timed); do echo $x; touch "Video/2.timed/${x%.mp4}.txt"; done
 # copy rest video files from 1.tagged in to 2.timed
 # make timing
-x=./Video/2.timed/123456. ; gedit ${x}txt& mplayer ${x}mp
+for x in $(ls Video/2.timed/*.mp4); do gedit ${x%.mp4}.txt& mplayer ${x}; done
 # cat video
 python3 src/cutter.py Video
 # upload from 3.to_post to youtube
@@ -15,4 +15,4 @@ python3 src/studio.py Video
 ### done
 
 # TODO
-fix artifacts
+fix video artifacts
