@@ -19,6 +19,7 @@ from utility import (
     read_metadata,
     save_metadata,
     get_mark,
+    get_marks,
 )
 
 
@@ -137,8 +138,20 @@ def filter_private(videos):
     return [vid for vid in videos if vid['status']['privacyStatus'] == 'private']
 
 
+def title_has_marks(marks, vid):
+    for mark in marks:
+        if mark in vid['snippet']['title']:
+            return True
+    return False
+
+
 def filter_scheduled(videos):
-    return [vid for vid in videos if '2022' in vid['snippet']['title']]
+    unscheduled_video = []
+    marks = get_marks()
+    for vid in videos:
+        if title_has_marks(marks, vid):
+            unscheduled_video.append(vid)
+    return unscheduled_video
 
 
 def insert_video_to_playlist(video_id, playlist_id):
@@ -166,7 +179,6 @@ def update_video(body):
         body=body,
     ).execute()
     return response
-
 
 
 def get_title(language):

@@ -15,7 +15,7 @@ def get_mark(data):
     for mark in get_marks():
         if mark in data:
             return mark
-    raise Error("Error: mark not found in video file name {}".format(data))
+    raise Exception("Error: mark not found in video file name {}".format(data))
 
 
 def get_uuid_time():
